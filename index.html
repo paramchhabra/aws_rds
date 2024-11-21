@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>To-Do List</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+    }
+    #task-form {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    #task-form input {
+      flex: 1;
+      padding: 10px;
+      font-size: 16px;
+      margin-right: 10px;
+    }
+    #task-form button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #5cb85c;
+      border: none;
+      color: white;
+      cursor: pointer;
+    }
+    #task-list {
+      list-style-type: none;
+      padding: 0;
+    }
+    .task-item {
+      background: white;
+      padding: 15px;
+      border: 1px solid #ddd;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .task-item.completed {
+      text-decoration: line-through;
+      color: gray;
+    }
+    .task-actions button {
+      margin-left: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>To-Do List</h1>
+  <form id="task-form">
+    <input type="text" id="task-input" placeholder="Enter a new task..." required>
+    <button type="submit">Add Task</button>
+  </form>
+  <ul id="task-list"></ul>
+
+  <script>
+    // Fetch all tasks from the server and render them
+    function fetchTasks() {
+      fetch("http://localhost:3001/tasks")
+        .then((response) => response.json())
+        .then((tasks) => {
+          const taskList = document.getElementById("task-list");
+          taskList.innerHTML = ""; // Clear previous tasks
+          tasks.forEach((task) => {
+            const taskItem = document.createElement("li");
+            taskItem.className = `task-item ${task.completed ? "completed" : ""}`;
+            taskItem.innerHTML = `
+              <span>${task.task}</span>
+              <div class="task-actions">
+                <button onclick="toggleTask(${task.id}, ${task.completed})">
+                  ${task.completed ? "Undo" : "Complete"}
+                </button>
+                <button onclick="deleteTask(${task.id})">Delete</button>
+              </div>
+            `;
+            taskList.appendChild(taskItem);
+          });
+        })
+        .catch((error) => console.error("Error fetching tasks:", error));
+    }
+
+    // Add a new task to the server
+    document.getElementById("task-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      const taskInput = document.getElementById("task-input").value;
+
+      fetch("http://localhost:3001/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task: taskInput }),
+      })
+        .then(() => {
+          document.getElementById("task-input").value = ""; // Clear input
+          fetchTasks(); // Refresh the task list
+        })
+        .catch((error) => console.error("Error adding task:", error));
+    });
+
+    // Delete a task
+    function deleteTask(taskId) {
+      fetch(`http://localhost:3001/tasks/${taskId}`, { method: "DELETE" })
+        .then(() => fetchTasks()) // Refresh the task list
+        .catch((error) => console.error("Error deleting task:", error));
+    }
+
+    // Toggle task completion status
+    function toggleTask(taskId, completed) {
+      fetch(`http://localhost:3001/tasks/${taskId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ completed: !completed }),
+      })
+        .then(() => fetchTasks()) // Refresh the task list
+        .catch((error) => console.error("Error toggling task:", error));
+    }
+
+    // Initial fetch of tasks when the page loads
+    fetchTasks();
+  </script>
+</body>
+</html>
